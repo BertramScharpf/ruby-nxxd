@@ -1,0 +1,219 @@
+#!/usr/bin/env ruby
+
+#
+#  nxxd  --  Hex dump tool
+#
+
+require "nxxd"
+require "nxxd/version"
+
+
+module Nxxd
+
+  class Application
+
+    NAME    = "nxxd"
+
+    OPTIONS = {
+      "r" => [ :reverse,   true,     "Reverse operation, pack"],
+      "o" => [ :output,    :NAME,    "Output file (- = stdout)"],
+      "output" => "o",
+      "f" => [ :full,      true,     "Full output (no squeeze)"],
+      "full" => "f",
+      "a" => [ :full,      false,    "Abbreviate (squeeze duplicate lines)"],
+      "p" => [ :plain,     true,     "Plain output (no comments, no C variables)"],
+      "u" => [ :upper,     true,     "Upper case A-F"],
+      "upper" => "u",
+      "l" => [ :line_size, :NUM,     "Line size"],
+      "line" => "l",
+      "d" => [ :addr_len,  :NUM,     "Address length"],
+      "addrs" => "d",
+      "i" => [ :cnums,     true,     "C-style number literals"],
+      "include" => "i",
+      "C" => [ :capitals,  true,     "Capitalize C variable names with -i"],
+      "capitalize" => "C",
+      "h" => [ :help,      :help,    "Print this help message"],
+      "help" => "h",
+      "v" => [ :version,   :version, "Version information"],
+      "version" => "v",
+    }
+
+    OPT_ENV = "NXXD"
+
+    class Options
+
+      attr_reader :opts, :args
+
+      def initialize params
+        @opts, @args = {}, []
+        env = ENV[ OPT_ENV]
+        if env then
+          @params = env.split
+          until @params.empty? do
+            p = @params.shift
+            case p
+            when /^--/ then $'.empty? or set $'
+            when /^-/  then set_short $'
+            else            set p
+            end
+          end
+        end
+        @params = params
+        until @params.empty? do
+          p = @params.shift
+          case p
+          when /^--/ then $'.empty? and break ; set $'
+          when /^-/  then set_short $'
+          else            @args.push p
+          end
+        end
+        @args.concat @params
+        @params = nil
+      rescue StandardError
+        $stderr.puts $!
+        exit 1
+      end
+
+      private
+
+      def set_short cont
+        @cont = cont
+        until @cont.empty? do
+          c = @cont.slice! 0
+          set c
+        end
+      ensure
+        @cont = nil
+      end
+
+      def set o
+        opt = loop do
+          d = OPTIONS[ o]
+          raise "Unknown option: #{o}" unless d
+          break d if Array === d
+          o = d
+        end
+        key, t, = opt
+        if Symbol === t then
+          type = type_repr t
+          if type then
+            arg = @cont.slice! 0..nil if @cont
+            arg = @params.shift if not arg or arg.empty?
+            arg = Integer arg if %i(NUM INT).include? type
+          else
+            send t
+            exit 0
+          end
+        else
+          arg = t
+        end
+        @opts[ key] = arg
+      end
+
+      def version
+        puts "#{NAME} -- #{VERSION}"
+        puts AUTHOR
+        puts "License: #{LICENSE}"
+      end
+
+      def help
+        version
+        puts
+        puts "Usage: #$0 [options] [ inputfile+ [ outputfile ] ]"
+        puts
+        OPTIONS.each { |opt,defn|
+          case defn
+          when String then
+            text = "= #{opt_repr defn}"
+          else
+            _, arg, text = *defn
+            type = type_repr arg if Symbol === arg
+          end
+          puts "  %-10s  %-10s  %s" % [(opt_repr opt), type, text]
+        }
+      end
+
+      def type_repr type
+        type if type =~ /\A[A-Z_]+\z/
+      end
+
+      def opt_repr o
+        o.length == 1 ? "-#{o}" : "--#{o}"
+      end
+
+    end
+
+    def initialize params
+      o = Options.new params
+      @opts, @args = o.opts, o.args
+      @inputs = []
+      @inputs.push @args.shift
+      @output = (@opts.delete :output) || @args.pop
+      @inputs.push @args.shift until @args.empty?
+    end
+
+    def run
+      open_output do |o|
+        if @opts[ :reverse] then
+          open_inputs do |f|
+            Dump.reverse f, o
+          end
+        else
+          cls = (@opts.delete :cnums) ? DumpNums : Dump
+          open_inputs do |f|
+            d = cls.new **@opts
+            d.run f do |l| o.puts l end
+          end
+        end
+      end
+    rescue ArgumentError
+      $stderr.puts "Incompatible Options: #@opts"
+      1
+    rescue Errno::EPIPE
+      $stderr.puts "Broken pipe. Stop."
+    rescue Errno::ESPIPE
+      $stderr.puts "Seek not possible. Specify an output file."
+      2
+    rescue Interrupt
+      $stderr.puts "Interrupted."
+      1
+    rescue
+      $stderr.puts "Error: #$! (#{$!.class})"
+      1
+    end
+
+    private
+
+    def open_inputs
+      plain = @opts.delete :plain
+      @inputs.each do |i|
+        i = nil if i == "-"
+        @opts[ :input] = i unless plain
+        if i then
+          File.open i, "r" do |f|
+            yield f
+          end
+        else
+          yield $stdin
+        end
+      ensure
+        @opts.delete :input
+      end
+      nil
+    end
+
+    def open_output
+      o = @output unless @output == "-"
+      if o then
+        File.open o, "w" do |o| yield o end
+      else
+        yield $stdout
+      end
+    end
+
+  end
+
+  exit (Application.new $*).run.to_i
+
+end
+
