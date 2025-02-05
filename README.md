@@ -147,4 +147,5 @@ highlighting included in this package [xxd.vim](./vim/syntax/xxd.vim).
 
   * (C) 2025 Bertram Scharpf <software@bertram-scharpf.de>
   * License: [BSD-2-Clause+](./LICENSE)
+  * Repository: [ruby-nxxd](https://github.com/BertramScharpf/ruby-nxxd)
 
