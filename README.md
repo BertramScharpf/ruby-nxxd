@@ -55,7 +55,7 @@ nxxd -i someimage.png
 Get help.
 
 ```bash
-nxxd  -h
+nxxd -h
 ```
 
 
