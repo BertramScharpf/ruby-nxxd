@@ -51,6 +51,7 @@ module Nxxd
     end
 
     def run input
+      block_given? or return [].tap { |r| run input do |l| r.push l end }
       addr = 0
       prev, repeat = nil, false
       yield "# #@input" if @input
@@ -84,7 +85,7 @@ module Nxxd
 
     class <<self
 
-      def reverse input, output = nil
+      def reverse input, output = nil, consecutive: nil
         output ||= ""
         o = String === output ? (WriteChunksString.new output) : output
         o.set_encoding Encoding::ASCII_8BIT
@@ -92,27 +93,30 @@ module Nxxd
         input.each_line { |l|
           l.chomp!
           case l
-            when /^\s*(?:#|$)/                  then nil
-            when /^\*/                          then repeat = true
-            when /^(?:(\h+):)?\s*((?:\h\h ?)*)/ then
-              addr, nibs = $~.captures
-              if addr then
-                addr = $1.to_i 0x10
-                if repeat then
-                  loop do
-                    s = addr - o.tell
-                    break if s <= 0
-                    o.write s >= r.length ? r : r[ 0, s]
-                  end
-                  repeat = false
-                else
+          when /^\s*(?:#|$)/ then
+            nil
+          when /^\*/ then
+            consecutive and
+              raise "Addressless undump doesn't allow repeat specifications."
+            repeat = true
+          when /^(?:(\h+):)?\s*((?:\h\h ?)*)/ then
+            addr, nibs = $~.captures
+            if !consecutive && addr then
+              addr = $1.to_i 0x10
+              if repeat then
+                loop do
+                  s = addr - o.tell
+                  break if s <= 0
+                  o.write s >= r.length ? r : r[ 0, s]
                 end
-                o.seek addr
+                repeat = false
               end
-              r = (nibs.scan /\h\h/).map { |x| x.to_i 0x10 }.pack "C*"
-              o.write r
-            else
-              raise "Uninterpretable hex dump: #{l.chomp}"
+              o.seek addr
+            end
+            r = (nibs.scan /\h\h/).map { |x| x.to_i 0x10 }.pack "C*"
+            o.write r
+          else
+            raise "Uninterpretable hex dump: #{l.chomp}"
           end
         }
         output
@@ -141,6 +145,7 @@ module Nxxd
     end
 
     def run input, &block
+      block_given? or return [].tap { |r| run input do |l| r.push l end }
       if @varname then
         yield "unsigned char #@varname[] = {"
         len = run_plain input, &block

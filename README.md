@@ -65,9 +65,14 @@ Here's an example:
 
 ```ruby
 require "nxxd"
-
 data = " !\"\#$%&'()*+,-./0123456789:;<=>?"
 Nxxd::Dump.new.run data do |l| puts l end
+```
+
+Or just:
+
+```ruby
+puts Nxxd::Dump.new.run data
 ```
 
 Reverse operation allows free address jumping.
@@ -88,6 +93,45 @@ File.open "status", "w" do |f|
   Nxxd::Dump.reverse x, f
 end
 ```
+
+
+## Inside Neovim
+
+If you're using Neovim and the Ruby provider
+[ruby-nvim](https://github.com/BertramScharpf/ruby-nvim) (Not the official
+neovim-ruby!), you probably prefer to pipe from and to buffers.
+
+```vim
+rubyfile <nxxd/nvim>
+vertical HexDump /etc/localtime
+```
+
+In case you have a string in a Ruby variable, dump it like this:
+
+```vim
+ruby t = "tränenüberströmt"
+ruby Nxxd::Nvim.dump_data t
+```
+
+You may dump a programs output as well:
+
+```vim
+HexDump! echo QmF6aW5nYSEK | openssl enc -a -d
+HexDump! dd if=/dev/urandom bs=16 count=4
+```
+
+Pipe your editor lines to a program like this:
+
+```
+ 1 H4sIALDvomcAA7u3
+ 2 dt/7ewOIAX8tU5eA
+ 3 AAAA
+ ~
+ ~
+:1,3HexPipe openssl enc -a -d | gzip -cd
+```
+
+See the file [nxxd.txt](./vim/doc/nxxd.txt) for a full documentation.
 
 
 ## Colorization

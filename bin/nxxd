@@ -15,26 +15,28 @@ module Nxxd
     NAME    = "nxxd"
 
     OPTIONS = {
-      "r" => [ :reverse,   true,     "Reverse operation, pack"],
-      "o" => [ :output,    :NAME,    "Output file (- = stdout)"],
+      "r" => [ :reverse,     true,     "Reverse operation, pack"],
+      "o" => [ :output,      :NAME,    "Output file (- = stdout)"],
       "output" => "o",
-      "f" => [ :full,      true,     "Full output (no squeeze)"],
+      "f" => [ :full,        true,     "Full output (no squeeze)"],
       "full" => "f",
-      "a" => [ :full,      false,    "Abbreviate (squeeze duplicate lines)"],
-      "p" => [ :plain,     true,     "Plain output (no comments, no C variables)"],
-      "u" => [ :upper,     true,     "Upper case A-F"],
+      "a" => [ :full,        false,    "Abbreviate (squeeze duplicate lines)"],
+      "p" => [ :plain,       true,     "Plain output (no comments, no C variables)"],
+      "u" => [ :upper,       true,     "Upper case A-F"],
       "upper" => "u",
-      "l" => [ :line_size, :NUM,     "Line size"],
+      "l" => [ :line_size,   :NUM,     "Line size"],
       "line" => "l",
-      "d" => [ :addr_len,  :NUM,     "Address length"],
+      "d" => [ :addr_len,    :NUM,     "Address length"],
       "addrs" => "d",
-      "i" => [ :cnums,     true,     "C-style number literals"],
+      "i" => [ :cnums,       true,     "C-style number literals"],
       "include" => "i",
-      "C" => [ :capitals,  true,     "Capitalize C variable names with -i"],
+      "C" => [ :capitals,    true,     "Capitalize C variable names with -i"],
       "capitalize" => "C",
-      "h" => [ :help,      :help,    "Print this help message"],
+      "c" => [ :consecutive, true,     "Consecutive undump (ignore addresses)"],
+      "consecutive" => "c",
+      "h" => [ :help,        :help,    "Print this help message"],
       "help" => "h",
-      "v" => [ :version,   :version, "Version information"],
+      "v" => [ :version,     :version, "Version information"],
       "version" => "v",
     }
 
@@ -154,9 +156,9 @@ module Nxxd
 
     def run
       open_output do |o|
-        if @opts[ :reverse] then
+        if @opts.delete :reverse then
           open_inputs do |f|
-            Dump.reverse f, o
+            Dump.reverse f, o, **@opts
           end
         else
           cls = (@opts.delete :cnums) ? DumpNums : Dump
@@ -188,8 +190,8 @@ module Nxxd
       plain = @opts.delete :plain
       @inputs.each do |i|
         i = nil if i == "-"
-        @opts[ :input] = i unless plain
         if i then
+          @opts[ :input] = i unless plain or @opts[ :reverse]
           File.open i, "r" do |f|
             yield f
           end

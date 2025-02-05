@@ -1,0 +1,114 @@
+*nxxd.txt*	Nxxd for Neovim
+
+	-----------------------------------------
+	Nxxd: A hex dump tool for Ruby and Neovim
+	-----------------------------------------
+
+Author: Bertram Scharpf <software@bertram-scharpf.de>
+Repository: https://github.com/BertramScharpf/ruby-nxxd
+License: BSD-2 style license
+
+
+==============================================================================
+RUBY API							*nxxd-ruby-api*
+
+Call the Ruby functions like this: >
+	:rubyfile <nxxd>
+	:ruby t = "tränenüberströmt"
+	:ruby Nxxd::Nvim.dump_data t
+
+To just get some output in the command line area, say >
+	:ruby puts Nxxd::Dump.new.run data
+This works in Vim as well, if you say `:ruby require "nxxd"` instead of
+`:rubyfile`.
+
+Or stay inside your buffer and window (after `:set nu`): >
+	+---------------------------------------+
+	| 1 t = "tränenüberströmt"		|
+	| 2 puts Nxxd::Dump.new.run data	|
+	| 3					|
+	| :					|
+	+---------------------------------------+
+Then say: >
+	:1,2ruby|
+
+
+==============================================================================
+COMMANDS							*nxxd-commands*
+
+Loading the commands: >
+
+	:rubyfile <nxxd/nvim>
+
+Command list:
+
+:HexDump [{file}]						*:HexDump*
+		Dump {file} or current file to a new buffer.
+		Example: >
+			:HexDump /etc/localtime
+<		To dump the file of the current buffer say: >
+			:update
+			:HexDump
+<		Specifying split directions by modifiers works: >
+			:botright vertical HexDump
+<		This makes vertical split the default: >
+			:ruby Nxxd::Nvim::split = :vertical
+			:HexDump
+
+:HexDump! [{cmd}]						*:HexDump!*
+		Run {cmd} or current file and dump the output to a new buffer.
+		Examples: >
+			:HexDump! echo QmF6aW5nYSEK | openssl enc -a -d
+			:HexDump! dd if=/dev/urandom bs=16 count=4
+
+:[range]HexPipe {cmd}						*:HexPipe*
+		Pipe [range] to command {cmd} and dump the output to a new
+		buffer.
+                Example. Your current buffer is (after `:set nu`): >
+			+---------------------------------------+
+			| 1 H4sIALDvomcAA7u3			|
+			| 2 dt/7ewOIAX8tU5eA			|
+			| 3 AAAA				|
+			| 4					|
+			|:					|
+			+---------------------------------------+
+<               This will be unconcealed by: >
+			:1,3HexPipe openssl enc -a -d | gzip -cd
+
+:[range]HexPack[!] [{file}]					*:HexPack* *:HexPack!*
+		Do reverse dump and save the result to {file} or to the
+		filename from the :HexDump that made the buffer. Byte
+		addresses will be followed.
+
+		If the file exists, [!] forces overwrite.
+
+		If [range] ist used, {file} must be given.
+
+
+:[range]HexFeed {cmd}
+		Reverse dump and pipe into command {cmd}. Append the output
+		below [range]. The interpretation will always be consecutive,
+		i. e. addresses will be ignored.
+		Example. Your current buffer is (after `:set nu`): >
+			+---------------------------------------+
+			| 1 # gziped data			|
+			| 2 1f8b 0800 62d5 a367  ....b..g	|
+			| 3 0003 734a acca cc4b  ..sJ...K	|
+			| 4 4f54 e402 0081 1563  OT.....c	|
+			| 5 c809 0000 00	 .....		|
+			| 6					|
+			|:					|
+			+---------------------------------------+
+<		This will be unconcealed by: >
+			:1,5HexFeed gzip -cd
+
+
+==============================================================================
+FURTHER INFORMATION						*nxxd-further*
+
+Have a look at the `README.md` file and at `nxxd`'s help output: >
+
+	:r !nxxd -h
+
+
+ vim:tw=78:ts=8:sw=4:noet:ft=help:norl:
