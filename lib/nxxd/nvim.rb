@@ -140,12 +140,12 @@ module Nxxd
       public
 
       def feed a, range
+        $vim.command "#{range.last}"
         popen a do |ro,re|
+          $vim.put [ ""], "l", true, true
           r = Neovim::Lines.new $vim.get_current_buf, range
           Nxxd::Dump.reverse r, ro, consecutive: true
           ro.close_write
-          $vim.command "#{range.last}"
-          $vim.put [ ""], "l", true, true
           ro.each_line { |l|
             l.chomp!
             $vim.put [ l], "l", false, true
@@ -154,6 +154,8 @@ module Nxxd
             l.chomp!
             $vim.put [ "# #{l}"], "l", false, true
           }
+        rescue
+          $vim.put [ "# #{$!.class}: #$!"], "l", false, true
         end
         $?.success? or $vim.put [ "### Exit code: #{$?.exitstatus}"], "l", false, true
       end

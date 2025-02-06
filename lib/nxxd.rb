@@ -99,7 +99,7 @@ module Nxxd
             consecutive and
               raise "Addressless undump doesn't allow repeat specifications."
             repeat = true
-          when /^(?:(\h+):)?\s*((?:\h\h ?)*)/ then
+          when /^(?:(\h+):)?\s*((?:\h\h ?)*)((?:  |\t).*)?$/ then
             addr, nibs = $~.captures
             if !consecutive && addr then
               addr = $1.to_i 0x10
@@ -116,7 +116,7 @@ module Nxxd
             r = (nibs.scan /\h\h/).map { |x| x.to_i 0x10 }.pack "C*"
             o.write r
           else
-            raise "Uninterpretable hex dump: #{l.chomp}"
+            raise "Uninterpretable hex dump: #{l.inspect}"
           end
         }
         output

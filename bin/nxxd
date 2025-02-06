@@ -179,6 +179,9 @@ module Nxxd
     rescue Interrupt
       $stderr.puts "Interrupted."
       1
+    rescue RuntimeError
+      $stderr.puts "Runtime Error: #$!"
+      1
     rescue
       $stderr.puts "Error: #$! (#{$!.class})"
       1
