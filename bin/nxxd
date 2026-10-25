@@ -18,6 +18,7 @@ module Nxxd
       "r" => [ :reverse,     true,     "Reverse operation, pack"],
       "o" => [ :output,      :NAME,    "Output file (- = stdout)"],
       "output" => "o",
+      "n" => [ :noclobber,   true,     "Don't overwrite existing files"],
       "f" => [ :full,        true,     "Full output (no squeeze)"],
       "full" => "f",
       "a" => [ :full,        false,    "Abbreviate (squeeze duplicate lines)"],
@@ -148,10 +149,7 @@ module Nxxd
     def initialize params
       o = Options.new params
       @opts, @args = o.opts, o.args
-      @inputs = []
-      @inputs.push @args.shift
-      @output = (@opts.delete :output) || @args.pop
-      @inputs.push @args.shift until @args.empty?
+      @output = (@opts.delete :output) || last_arg_if_not_existing
     end
 
     def run
@@ -189,9 +187,14 @@ module Nxxd
 
     private
 
+    def last_arg_if_not_existing
+      return if File.exist? @args.last
+      @args.pop
+    end
+
     def open_inputs
       plain = @opts.delete :plain
-      @inputs.each do |i|
+      @args.each do |i|
         i = nil if i == "-"
         if i then
           @opts[ :input] = i unless plain or @opts[ :reverse]
@@ -208,9 +211,12 @@ module Nxxd
     end
 
     def open_output
+      nc = @opts.delete :noclobber
       o = @output unless @output == "-"
       if o then
-        File.open o, "w" do |o| yield o end
+        mode = "w"
+        mode << "x" if nc
+        File.open o, mode do |f| yield f end
       else
         yield $stdout
       end
