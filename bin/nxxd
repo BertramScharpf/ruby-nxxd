@@ -48,36 +48,37 @@ module Nxxd
       attr_reader :opts, :args
 
       def initialize params
-        @opts, @args = {}, []
+        @opts = {}
+        @args = []
         env = ENV[ OPT_ENV]
         if env then
-          @params = env.split
-          until @params.empty? do
-            p = @params.shift
-            case p
-            when /^--/ then $'.empty? or set $'
-            when /^-/  then set_short $'
-            else            set p
-            end
-          end
+          @params, @args = env.split, []
+          parse_params
+          @args.empty? or @args.clear
         end
         @params = params
+        parse_params
+      rescue StandardError
+        $stderr.puts $!
+        exit 1
+      ensure
+        @params = nil
+      end
+
+      private
+
+      def parse_params
         until @params.empty? do
           p = @params.shift
           case p
-          when /^--/ then $'.empty? and break ; set $'
-          when /^-/  then set_short $'
+          when /^--/ then if $'.empty? then break        else set $'       end
+          when /^-/  then if $'.empty? then @args.push p else set_short $' end
           else            @args.push p
           end
         end
         @args.concat @params
-        @params = nil
-      rescue StandardError
-        $stderr.puts $!
-        exit 1
+        @params.clear
       end
-
-      private
 
       def set_short cont
         @cont = cont
@@ -132,7 +133,7 @@ module Nxxd
             _, arg, text = *defn
             type = type_repr arg if Symbol === arg
           end
-          puts "  %-10s  %-10s  %s" % [(opt_repr opt), type, text]
+          puts "  %-16s  %-10s  %s" % [(opt_repr opt), type, text]
         }
       end
 
@@ -149,10 +150,11 @@ module Nxxd
     def initialize params
       o = Options.new params
       @opts, @args = o.opts, o.args
-      @output = (@opts.delete :output) || last_arg_if_not_existing
     end
 
     def run
+      @output = (@opts.delete :output) || last_arg_if_not_existing
+      @args.push nil if @args.empty?
       open_output do |o|
         if @opts.delete :reverse then
           open_inputs do |f|
@@ -188,8 +190,8 @@ module Nxxd
     private
 
     def last_arg_if_not_existing
-      return if File.exist? @args.last
-      @args.pop
+      a = @args.last
+      @args.pop unless not a or a == "-" or File.exist? a
     end
 
     def open_inputs
