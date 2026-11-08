@@ -4,7 +4,7 @@
 
 module Nxxd
 
-  VERSION = "1.3".freeze
+  VERSION = "1.4".freeze
   AUTHOR  = "(C) 2026 Bertram Scharpf <software@bertram-scharpf.de>"
   LICENSE = "BSD-2-Clause+"
 
